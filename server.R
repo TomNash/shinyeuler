@@ -80,7 +80,10 @@ shinyServer(function(input, output, session) {
     #                    paste0(input$list.B.name,"\n",length(listB)),
     #                    paste0(input$list.C.name,"\n",length(listC)))
     #   
-    #   return(list(diagram=venn,A=listAunique,B=listBunique,C=listCunique,
+    #   return(list(diagram=venn,
+    #               A=listAunique,
+    #               B=listBunique,
+    #               C=listCunique,
     #               AB=listABunique,
     #               AC=listACunique,
     #               BC=listBCunique,
@@ -252,13 +255,34 @@ shinyServer(function(input, output, session) {
                     paste0("No selection has been made or plot has been updated"))
     }
   })
+
   output$downloadPlot <- downloadHandler(
-    filename = function() { paste0(input$title, '.png') },
+    filename = function() { 
+      paste0(input$title, '_shinyeuler.zip')
+    },
     content = function(file) {
+      current.dir <- getwd()
+      setwd(tempdir())
       
-      png(file, width=800, height=600, unit="px", pointsize = 12, res=NA)
+      subsets.file <- paste0(input$title, "_subsets.txt")
+      plot.file <- paste0(input$title, "_venn.png")
+      
+      n <- max(length(venn$left.list), length(venn$intersect), length(venn$right.list))
+      length(venn$left.list) <- n
+      length(venn$right.list) <- n
+      length(venn$intersect) <- n
+      output.df <- cbind(venn$left.list, venn$intersect, venn$right.list)
+      colnames(output.df) <- c(venn$left.list.name, "Intersection", venn$right.list.name)
+      output.df[is.na(output.df)] <- ""
+      write.table(output.df, file = subsets.file, sep="\t\t", row.names=F)
+      
+      png(plot.file, width=800, height=600, unit="px", pointsize = 12, res=NA)
       plotInput()
       dev.off()
-    }
+      zip(zipfile = file,
+          files = c(plot.file, subsets.file))
+      setwd(current.dir)
+    },
+    contentType="application/zip"
   )
 })
